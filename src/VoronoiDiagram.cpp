@@ -30,7 +30,7 @@ VoronoiDiagram::VoronoiDiagram(const std::vector<Vector2>& points)
         mSites.push_back(Site{i, points[i], nullptr});
         mFaces.push_back(Face{&mSites.back(), nullptr});
         mSites.back().face = &mFaces.back();
-        mData.push_back(RegionData(&mSites.back(), 0));
+        mData.push_back(RegionData(&mSites.back(), 0, 0));
     }
 }
 

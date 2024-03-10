@@ -55,15 +55,24 @@ void RegionData::calculateConvex() {
     }
 }
 
+Site *RegionData::getSite()
+{
+    return site;
+}
 
-RegionData::RegionData(Site *s, int h = 0){
+RegionData::RegionData(Site *s, int h = 0, int r = 0){
     site = s;
     calculateConvex();
     setHeight(h);
+    setRiver(r);
 }
 
 void RegionData::setHeight(int h) {
     calculateConvex();
+
+    if (h < 0)
+        h = 0;
+
     height = h; 
     if (h > 1)
         convex.setFillColor(sf::Color(102 - h / 2, 204 - h / 2, 0));
@@ -71,11 +80,25 @@ void RegionData::setHeight(int h) {
         convex.setFillColor(sf::Color(204, 204, 0));
     else
         convex.setFillColor(sf::Color(0, 204, 204));
+
+    if (river > 0)
+        convex.setFillColor(sf::Color::Cyan);
 }
 
 int RegionData::getHeight() {
     return height;
 }
+
+void RegionData::setRiver(int r) {
+    river = r;
+    if (river > 0)
+        convex.setFillColor(sf::Color::Cyan);
+}
+
+int RegionData::getRiver() {
+    return river;
+}
+
 sf::ConvexShape RegionData::getConvex() const {
     return convex;
 }

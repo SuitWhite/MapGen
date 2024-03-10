@@ -51,6 +51,19 @@ void drawPoint(sf::RenderWindow& window, Vector2 point, sf::Color color)
     window.draw(shape);
 }
 
+void drawMouse(sf::RenderWindow& window)
+{
+    sf::CircleShape shape(POINT_RADIUS);
+
+    sf::Vector2f mouse; 
+    mouse.x = sf::Mouse::getPosition(window).x / ( WINDOW_WIDTH * 1.1f );
+    mouse.y = sf::Mouse::getPosition(window).y / (WINDOW_HEIGHT * 1.1f);
+
+    shape.setPosition(sf::Vector2f(mouse.x - POINT_RADIUS, mouse.y - POINT_RADIUS));
+    shape.setFillColor(sf::Color::Red);
+    window.draw(shape);
+}
+
 void drawEdge(sf::RenderWindow& window, Vector2 origin, Vector2 destination, sf::Color color)
 {
     sf::Vertex line[] =
@@ -92,7 +105,7 @@ void drawDiagram(sf::RenderWindow& window, VoronoiDiagram& diagram)
             {
                 Vector2 origin = (halfEdge->origin->point - center) * OFFSET + center;
                 Vector2 destination = (halfEdge->destination->point - center) * OFFSET + center;
-                //drawEdge(window, origin, destination, sf::Color::Red);
+                //drawEdge(window, origin, destination, sf::Color::Cyan);
             }
 
             halfEdge = halfEdge->next;
@@ -105,23 +118,34 @@ void drawDiagram(sf::RenderWindow& window, VoronoiDiagram& diagram)
         convex = diagram.getData(i)->getConvex();
         window.draw(convex);
 
+
+        // rivers
+        // if (diagram.getData(i)->getRiver() > 0) {
+            
+        // }
+        
+
+
+        // mouse
         sf::Vector2f mouse; 
-        mouse.x = sf::Mouse::getPosition(window).x/WINDOW_WIDTH;
-        mouse.y = sf::Mouse::getPosition(window).y/WINDOW_HEIGHT;
+        mouse.x = sf::Mouse::getPosition(window).x / ( WINDOW_WIDTH);
+        mouse.y = sf::Mouse::getPosition(window).y / (WINDOW_HEIGHT);
+
+        drawMouse(window);
 
         //std::cout << mouse.x << std::endl;
 
         // check if the mouse is inside the shape
-        if (convex.getLocalBounds().contains(mouse.x, mouse.y))
-        {
-            int ikkh = 0;
-            for (const auto& j : diagram.getNeighbors(i)) {
-            window.draw(convex);
-                drawEdge(window, diagram.getNeighborsEdges(i)[ikkh].origin->point, diagram.getNeighborsEdges(i)[ikkh].destination->point, sf::Color::Red);
-                drawPoint(window, diagram.getSite(diagram.getNeighbors(i)[ikkh])->point, sf::Color::Red);
-                ikkh++;
-            }
-        }
+        // if (convex.getGlobalBounds().contains(mouse.x, mouse.y))
+        // {
+        //     int ikkh = 0;
+        //     for (const auto& j : diagram.getNeighbors(i)) {
+        //     window.draw(convex);
+        //         drawEdge(window, diagram.getNeighborsEdges(i)[ikkh].origin->point, diagram.getNeighborsEdges(i)[ikkh].destination->point, sf::Color::Red);
+        //         drawPoint(window, diagram.getSite(diagram.getNeighbors(i)[ikkh])->point, sf::Color::Red);
+        //         ikkh++;
+        //     }
+        // }
     }
 }
 
@@ -202,15 +226,18 @@ void generateHeights(VoronoiDiagram& diagram, int seed)
     {
         auto center = diagram.getSite(i)->point;
         auto data = diagram.getData(i);
-        std::cout << center << std::endl;
+        // std::cout << center << std::endl;
         
-        int h = 35 + rand() % 15 - abs(center.x*100-50) - abs(center.y*100-50);
-        std::cout << h << std::endl;
+        int h = 0;//35 + rand() % 15 - abs(center.x*100-50) - abs(center.y*100-50);
+        // std::cout << h << std::endl;
         if (h<0)
             h = 0;
         diagram.getData(i)->setHeight(h);
-    }
- 
+    }    
+}
+
+void generateBeach(VoronoiDiagram& diagram)
+{
     for (auto i = std::size_t(0); i < diagram.getNbSites(); ++i)
     {
         auto data = diagram.getData(i);
@@ -223,18 +250,109 @@ void generateHeights(VoronoiDiagram& diagram, int seed)
     }
 }
 
+void generateRivers(VoronoiDiagram& diagram, int seed)
+{
+    int i = 0, river_size = 0;
+    int number_of_rivers = 5;
+    RegionData *tmpData;
+
+    srand(seed);
+
+    for (auto tmp = 0; tmp < number_of_rivers; ++tmp)
+    {
+        i = rand()%diagram.getNbSites();
+        river_size = rand()%10;
+
+        auto center = diagram.getSite(i)->point;
+
+        if (diagram.getData(i)->getHeight() <= 1) {
+            tmp--;
+            continue;
+        }
+
+        tmpData = diagram.getData(i);
+        std::cout << "TEST TEST TEST" << std::endl;
+
+        while (tmpData->getHeight() >= 1) {
+            tmpData->setRiver(river_size);
+            std::cout << "TEST TEST TEST 2" << std::endl;
+
+            auto lowestNb = diagram.getData(diagram.getNeighbors(tmpData->getSite()->index)[0]);
+            for (const auto& j : diagram.getNeighbors(tmpData->getSite()->index))
+            {
+                auto nbData = diagram.getData(j);
+                if (nbData->getHeight() < lowestNb->getHeight() && !nbData->getRiver())
+                    //std::cout << tmpData->getHeight() << " " << nbData->getHeight() << std::endl;
+                    lowestNb = nbData;
+            }
+            tmpData = lowestNb;
+
+        }
+
+    }
+}
+
+void increaseHeight(sf::RenderWindow& window, VoronoiDiagram &diagram)
+{
+    sf::Vector2f mouse; 
+    sf::ConvexShape convex;
+    std::size_t i;
+    mouse.x = sf::Mouse::getPosition(window).x / (WINDOW_WIDTH);
+    mouse.y = sf::Mouse::getPosition(window).y / (WINDOW_HEIGHT);
+
+    for (i = 0; i < diagram.getNbSites(); ++i)
+    {
+        convex = diagram.getData(i)->getConvex();
+        if (convex.getGlobalBounds().contains(mouse.x, mouse.y)) {
+            diagram.getData(i)->setHeight(diagram.getData(i)->getHeight() + 5);
+
+            for (const auto& j : diagram.getNeighbors(i)) {
+                diagram.getData(j)->setHeight(diagram.getData(j)->getHeight() + 2);
+            }
+
+            generateBeach(diagram);
+        }
+    }  
+}
+
+void decreaseHeight(sf::RenderWindow& window, VoronoiDiagram &diagram)
+{
+    sf::Vector2f mouse; 
+    sf::ConvexShape convex;
+    std::size_t i;
+
+    mouse.x = sf::Mouse::getPosition(window).x / (WINDOW_WIDTH);
+    mouse.y = sf::Mouse::getPosition(window).y / (WINDOW_HEIGHT);
+
+    for (i = 0; i < diagram.getNbSites(); ++i)
+    {
+        convex = diagram.getData(i)->getConvex();
+        if (convex.getGlobalBounds().contains(mouse.x, mouse.y)) {
+            diagram.getData(i)->setHeight(diagram.getData(i)->getHeight() - 5);
+
+            for (const auto& j : diagram.getNeighbors(i)) {
+                diagram.getData(j)->setHeight(diagram.getData(j)->getHeight() - 2);
+            }
+
+            generateBeach(diagram);
+        }
+    }    
+}
+
 int main()
 {
-    std::size_t nbPoints = 1000;
+    std::size_t nbPoints = 2500;
     
     uint64_t seed = std::chrono::system_clock::now().time_since_epoch().count();
     
     VoronoiDiagram diagram = generateRandomDiagram(nbPoints, seed);
-    //diagram = generateDiagram(diagram.computeLloydRelaxation());
+    diagram = generateDiagram(diagram.computeLloydRelaxation());
     //diagram = generateDiagram(diagram.computeLloydRelaxation());
     //diagram = generateDiagram(diagram.computeLloydRelaxation());
     diagram.computeTriangulation();
     generateHeights(diagram, seed);
+    //generateRivers(diagram, seed);
+    generateBeach(diagram);
     
     // Display the diagram
     sf::ContextSettings settings;
@@ -254,11 +372,22 @@ int main()
                 diagram = generateRandomDiagram(nbPoints, seed);
                 diagram.computeTriangulation();
                 generateHeights(diagram, seed);
+                //generateRivers(diagram, seed);
+                generateBeach(diagram);
             }
             else if (event.type == sf::Event::KeyReleased && event.key.code == sf::Keyboard::Key::R) {
                 diagram = generateDiagram(diagram.computeLloydRelaxation());
                 diagram.computeTriangulation();
                 generateHeights(diagram, seed);
+                //generateRivers(diagram, seed);
+                generateBeach(diagram);
+            }
+            if (event.type == sf::Event::MouseButtonPressed) {
+                if (event.mouseButton.button == sf::Mouse::Left) {
+                    increaseHeight(window, diagram);
+                } else if (event.mouseButton.button == sf::Mouse::Right) {
+                    decreaseHeight(window, diagram);
+                }
             }
         }
 
